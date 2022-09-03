@@ -7,25 +7,36 @@
     <title>Document</title>
 </head>
 <body>
+    <div id="app">
+        <div>{{name}}</div>
+        <span>{{age}}</span>
+    </div>
+
     <script src="./vue.js"></script>
     <script>
         // 响应式的数据变化，数据变化了我可以监控到数据变化
         // 数据的取值和更改值我们要监控到
         const vm = new Vue({
-            data() {
-                return {
-                    name: 'zl',
-                    age: 10,
-                    address: {
-                        num: 10,
-                        content: '西安市'
-                    },
-                    hobby: ['学习', '睡觉', { a: 1 }]
-                }
-            }
+            data: {
+                name: 'zl',
+                age: 10,
+                address: {
+                    num: 10,
+                    content: '西安市'
+                },
+                hobby: ['学习', '睡觉', { a: 1 }]
+            },
+            template: '<div>hello</div>'
+            // el: '#app' // 将数据解析到元素上
         })
-        vm.hobby.push({ b: 2 })
-        console.log(vm.hobby)
+        vm.$mount('#app')
+        
+        /*
+            1. 模板引擎 性能差，需要正则匹配 1.0的时候没有引入虚拟DOM的改变
+            2. 采用虚拟DOM，数据变化后比较虚拟DOM的差异，最后更新需要更新的地方
+            3. 核心就是需要将 模板变成 js语法，通过js语法生成虚拟DOM
+        */
+        
     </script>
 </body>
 </html>
