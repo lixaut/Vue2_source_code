@@ -39,12 +39,64 @@
     return Constructor;
   }
 
+  var oldArrayProto = Array.prototype;
+  var newArrayProto = Object.create(oldArrayProto);
+  var methods = [// 找到所有的变异方法
+  'push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
+  methods.forEach(function (method) {
+    // arr.push(1, 2, 3)
+    newArrayProto[method] = function () {
+      var _oldArrayProto$method;
+
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      // 重写数组方法
+      // push()
+      var result = (_oldArrayProto$method = oldArrayProto[method]).call.apply(_oldArrayProto$method, [this].concat(args)); // 内部调用原来方法，函数劫持，切片编程
+      // 需要对新增的数据进行劫持
+
+
+      var inserted;
+      var ob = this.__ob__;
+
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break;
+
+        case 'splice':
+          inserted = args.slice(2);
+          break;
+      }
+
+      if (inserted) {
+        ob.observeArray(inserted);
+      }
+
+      return result;
+    };
+  });
+
   var Observer = /*#__PURE__*/function () {
     function Observer(data) {
       _classCallCheck(this, Observer);
 
-      // Object.defineProperty只能劫持已经存在的属性
-      this.walk(data);
+      // 给数据加了一个标识，如果数据上有__ob__，则说明这个属性被观测了
+      Object.defineProperty(data, '__ob__', {
+        value: this,
+        enumerable: false
+      }); // Object.defineProperty只能劫持已经存在的属性
+
+      if (Array.isArray(data)) {
+        // 重写数组方法
+        data.__proto__ = newArrayProto;
+        this.observeArray(data);
+      } else {
+        this.walk(data);
+      }
     }
 
     _createClass(Observer, [{
@@ -54,6 +106,13 @@
         // 重新定义属性
         Object.keys(data).forEach(function (key) {
           return defineReactive(data, key, data[key]);
+        });
+      }
+    }, {
+      key: "observeArray",
+      value: function observeArray(data) {
+        data.forEach(function (item) {
+          return observe(item);
         });
       }
     }]);
@@ -68,13 +127,14 @@
     Object.defineProperty(target, key, {
       get: function get() {
         // 取值的时候会执行get
-        console.log('用户取值了');
+        // console.log('用户取值了')
         return value;
       },
       set: function set(newValue) {
         // 修改的时候会执行set
-        console.log('用户设置值了');
+        // console.log('用户设置值了')
         if (newValue === value) return;
+        observe(newValue);
         value = newValue;
       }
     });
@@ -83,6 +143,10 @@
     // 劫持对象
     if (_typeof(data) !== 'object' || data == null) {
       return; // 只对对象劫持
+    }
+
+    if (data.__ob__ instanceof Observer) {
+      return data.__ob__;
     } // console.log(data)
 
     /*

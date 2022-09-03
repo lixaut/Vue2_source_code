@@ -19,12 +19,13 @@
                     address: {
                         num: 10,
                         content: '西安市'
-                    }
+                    },
+                    hobby: ['学习', '睡觉', { a: 1 }]
                 }
             }
         })
-        vm.name = 'ok'
-        console.log(vm)
+        vm.hobby.push({ b: 2 })
+        console.log(vm.hobby)
     </script>
 </body>
 </html>

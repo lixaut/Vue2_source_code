@@ -1,12 +1,28 @@
+import { newArrayProto } from "./array"
 
 class Observer {
     constructor(data) {
+        // 给数据加了一个标识，如果数据上有__ob__，则说明这个属性被观测了
+        Object.defineProperty(data, '__ob__', {
+            value: this,
+            enumerable: false
+        })
         // Object.defineProperty只能劫持已经存在的属性
-        this.walk(data)
+        if(Array.isArray(data)) {
+            // 重写数组方法
+            data.__proto__ = newArrayProto
+            this.observeArray(data)
+        } else {
+            this.walk(data)
+        }
     }
+    
     walk(data) { // 循环对象，对属性依次劫持
         // 重新定义属性
         Object.keys(data).forEach(key => defineReactive(data, key, data[key]))
+    }
+    observeArray(data) {
+        data.forEach(item => observe(item))
     }
 }
 
@@ -14,12 +30,13 @@ export function defineReactive(target, key, value) { // 闭包 属性劫持
     observe(value) // 对所有属性进行劫持
     Object.defineProperty(target, key, {
         get() { // 取值的时候会执行get
-            console.log('用户取值了')
+            // console.log('用户取值了')
             return value
         },
         set(newValue) { // 修改的时候会执行set
-            console.log('用户设置值了')
+            // console.log('用户设置值了')
             if(newValue === value) return
+            observe(newValue)
             value = newValue
         }
     })
@@ -29,6 +46,9 @@ export function observe(data) {
     // 劫持对象
     if (typeof data !== 'object' || data == null) {
         return // 只对对象劫持
+    }
+    if(data.__ob__ instanceof Observer) {
+        return data.__ob__
     }
     // console.log(data)
 
