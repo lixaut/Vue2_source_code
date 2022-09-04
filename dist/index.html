@@ -8,7 +8,9 @@
 </head>
 <body>
     <div id="app">
-        <div>{{name}}</div>
+        <div style="color:red">
+            {{name}} hello
+        </div>
         <span>{{age}}</span>
     </div>
 
@@ -25,8 +27,7 @@
                     content: '西安市'
                 },
                 hobby: ['学习', '睡觉', { a: 1 }]
-            },
-            template: '<div>hello</div>'
+            }
             // el: '#app' // 将数据解析到元素上
         })
         vm.$mount('#app')

@@ -4,9 +4,91 @@
     (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
-    // 对模板进行编译处理
-    function compileToFunction(template) {// 1. 将template转换成 ast语法树
-      // 2. 生成render方法（render方法返回的结果就是 虚拟DOM）
+    var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
+    var ncname = '[a-zA-Z_][\\w\\-\\.]*';
+    var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
+    var startTagOpen = new RegExp("^<".concat(qnameCapture));
+    var startTagClose = /^\s*(\/?)>/;
+    var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>"));
+
+    function parseHTML(html) {
+      // 解析一个删除一个
+      function advance(n) {
+        html = html.substring(n);
+      } // 解析开始标签
+
+
+      function parseStartTag() {
+        var start = html.match(startTagOpen);
+
+        if (start) {
+          var match = {
+            tagName: start[1],
+            // 标签名
+            attrs: [] // 标签属性
+
+          };
+          advance(start[0].length); // 如果不是开始标签的结束，就一直匹配下去
+
+          var attr, end;
+
+          while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+            advance(attr[0].length);
+            match.attrs.push({
+              name: attr[1],
+              value: attr[3] || attr[4] || attr[5]
+            });
+          }
+
+          if (end) {
+            advance(end[0].length);
+          }
+
+          return match;
+        } // 不是开始标签
+
+
+        return false;
+      }
+
+      while (html) {
+        // textEnd = 0,开始标签或是结束标签
+        // textEnd > 0,文本结束的地方
+        var textEnd = html.indexOf('<');
+
+        if (textEnd == 0) {
+          var startTagMatch = parseStartTag(); // 开始标签的匹配
+
+          if (startTagMatch) {
+            // 解析到开始标签
+            // console.log(startTagMatch)
+            continue;
+          }
+
+          var endTagMatch = html.match(endTag);
+
+          if (endTagMatch) {
+            advance(endTagMatch[0].length); // console.log(endTagMatch)
+
+            continue;
+          }
+        }
+
+        if (textEnd > 0) {
+          var text = html.substring(0, textEnd); // 文本内容
+
+          if (text) {
+            advance(text.length); // console.log(text)
+          }
+        }
+      } // console.log(html)
+
+    } // 对模板进行编译处理
+
+
+    function compileToFunction(template) {
+      // 1. 将template转换成 ast语法树
+      parseHTML(template); // 2. 生成render方法（render方法返回的结果就是 虚拟DOM）
     }
 
     function _typeof(obj) {
@@ -234,7 +316,7 @@
 
 
           if (template) {
-            var render = compileToFunction();
+            var render = compileToFunction(template);
             ops.render = render;
           }
         } // 最终可以获取render方法
