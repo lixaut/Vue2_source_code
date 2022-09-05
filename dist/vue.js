@@ -12,7 +12,61 @@
     var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>"));
 
     function parseHTML(html) {
-      // 解析一个删除一个
+      var ELEMENT_TYPE = 1;
+      var TEXT_TYPE = 3;
+      var stack = []; // 用于存放元素
+
+      var currentParent; // 指向栈中最后一个
+
+      var root; // 最终需要转化成一棵抽象语法树
+
+      function createASTElement(tag, attrs) {
+        return {
+          tag: tag,
+          type: ELEMENT_TYPE,
+          children: [],
+          attrs: attrs,
+          parent: null
+        };
+      } // 利用栈来构造一棵树
+
+
+      function start(tag, attrs) {
+        // console.log(tag, attrs, '开始')
+        var node = createASTElement(tag, attrs); // 创造一个ast节点
+
+        if (!root) {
+          // 看一下是否是空树
+          root = node; // 如果为空则当前树是树的根节点
+        }
+
+        if (currentParent) {
+          node.parent = currentParent;
+          currentParent.children.push(node);
+        }
+
+        stack.push(node);
+        currentParent = node; // currentParent为栈中最后一个
+      }
+
+      function chars(text) {
+        // 文本直接放到当前指向的节点中
+        // console.log(text, '文本')
+        text = text.replace(/\s/g, '');
+        text && currentParent.children.push({
+          type: TEXT_TYPE,
+          text: text,
+          parent: currentParent
+        });
+      }
+
+      function end(tag) {
+        // console.log(tag, '结束')
+        stack.pop();
+        currentParent = stack[stack.length - 1];
+      } // 解析一个删除一个
+
+
       function advance(n) {
         html = html.substring(n);
       } // 解析开始标签
@@ -30,9 +84,9 @@
           };
           advance(start[0].length); // 如果不是开始标签的结束，就一直匹配下去
 
-          var attr, end;
+          var attr, _end;
 
-          while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+          while (!(_end = html.match(startTagClose)) && (attr = html.match(attribute))) {
             advance(attr[0].length);
             match.attrs.push({
               name: attr[1],
@@ -40,8 +94,8 @@
             });
           }
 
-          if (end) {
-            advance(end[0].length);
+          if (_end) {
+            advance(_end[0].length);
           }
 
           return match;
@@ -62,13 +116,15 @@
           if (startTagMatch) {
             // 解析到开始标签
             // console.log(startTagMatch)
+            start(startTagMatch.tagName, startTagMatch.attrs);
             continue;
           }
 
           var endTagMatch = html.match(endTag);
 
           if (endTagMatch) {
-            advance(endTagMatch[0].length); // console.log(endTagMatch)
+            advance(endTagMatch[0].length);
+            end(endTagMatch[1]); // console.log(endTagMatch)
 
             continue;
           }
@@ -78,17 +134,19 @@
           var text = html.substring(0, textEnd); // 文本内容
 
           if (text) {
+            chars(text);
             advance(text.length); // console.log(text)
           }
         }
-      } // console.log(html)
+      }
 
-    } // 对模板进行编译处理
-
+      return root;
+    }
 
     function compileToFunction(template) {
       // 1. 将template转换成 ast语法树
-      parseHTML(template); // 2. 生成render方法（render方法返回的结果就是 虚拟DOM）
+      var ast = parseHTML(template);
+      console.log(ast); // 2. 生成render方法（render方法返回的结果就是 虚拟DOM）
     }
 
     function _typeof(obj) {
