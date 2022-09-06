@@ -27,3 +27,4 @@ npm install rollup rollup-plugin-babel @babel/core @babel/preset-env --save-dev
     4. 后续每次数据更新只执行render函数（无需再进行ast数转换的过程）
     5. render函数会产生虚拟节点（使用响应数据）
     6. 根据生成的虚拟节点创造真实的DOM
+

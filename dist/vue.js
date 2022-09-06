@@ -328,7 +328,6 @@
     var code = codegen(ast);
     code = "with(this){return ".concat(code, "}");
     var render = new Function(code); // 根据代码生成render函数
-    // console.log(render.toString())
 
     return render;
     /*
@@ -504,17 +503,127 @@
     }
   }
 
+  function createElementVNode(vm, tag, data) {
+    if (data == null) {
+      data = {};
+    }
+
+    var key = data.key;
+
+    if (key) {
+      delete data.key;
+    }
+
+    for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+      children[_key - 3] = arguments[_key];
+    }
+
+    return vnode(vm, tag, key, data, children);
+  }
+  function createTextVNode(vm, text) {
+    return vnode(vm, undefined, undefined, undefined, undefined, text);
+  }
+
+  function vnode(vm, tag, key, data, children, text) {
+    return {
+      vm: vm,
+      tag: tag,
+      key: key,
+      data: data,
+      children: children,
+      text: text
+    };
+  }
+  /*
+      1. ast做的是语法层面的转化，描述的是语法本身
+      2. 虚拟DOM，描述的是DOM元素，可以增加一些自定义属性
+  */
+
+  function createElm(vnode) {
+    var tag = vnode.tag,
+        data = vnode.data,
+        children = vnode.children,
+        text = vnode.text;
+
+    if (typeof tag === 'string') {
+      // 标签
+      // 将虚拟节点和真实节点对应起来
+      vnode.el = document.createElement(tag); // 更新属性
+
+      patchProps(vnode.el, data);
+      children.forEach(function (child) {
+        vnode.el.appendChild(createElm(child));
+      });
+    } else {
+      vnode.el = document.createTextNode(text);
+    }
+
+    return vnode.el;
+  }
+
+  function patchProps(el, props) {
+    for (var key in props) {
+      if (key === 'style') {
+        for (var styleName in props.style) {
+          el.style[styleName] = props.style[styleName];
+        }
+      } else {
+        el.setAttribute(key, props[key]);
+      }
+    }
+  }
+
+  function patch(oldVNode, vnode) {
+    // 初始渲染流程
+    var isRealElement = oldVNode.nodeType;
+
+    if (isRealElement) {
+      var elm = oldVNode; // 获取真实元素
+
+      var parentElm = elm.parentNode; // 拿到父元素
+
+      var newElm = createElm(vnode); // 生成新节点
+
+      parentElm.insertBefore(newElm, elm.nextSibling); // 插入新节点
+
+      parentElm.removeChild(elm); // 删除老节点
+
+      return newElm;
+    }
+  }
+
   function initLifeCycle(Vue) {
-    Vue.prototype._update = function () {
-      console.log('update');
+    Vue.prototype._update = function (vnode) {
+      // 将虚拟DOM转化成真实DOM
+      var vm = this;
+      var el = vm.$el; // patch既有初始化的功能，又有更新的功能
+
+      vm.$el = patch(el, vnode);
+    }; // _c('div', {}, ...children)
+
+
+    Vue.prototype._c = function () {
+      return createElementVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    }; // _v(text)
+
+
+    Vue.prototype._v = function () {
+      return createTextVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+
+    Vue.prototype._s = function (value) {
+      if (_typeof(value) !== 'object') return value;
+      return JSON.stringify(value);
     };
 
     Vue.prototype._render = function () {
-      console.log('render');
+      // 当渲染的时候去实例中取值，就可以将属性和试图绑在一起
+      return this.$options.render.call(this);
     };
   }
   function mountComponent(vm, el) {
-    // 1. 调用render 产生虚拟DOM
+    vm.$el = el; // 1. 调用render 产生虚拟DOM
+
     vm._update(vm._render()); // vm.$options.render() 虚拟节点
     // 2. 根据虚拟DOM产生真实DOM
     // 3 插入到el元素中
@@ -563,7 +672,7 @@
         }
       }
 
-      mountComponent(vm); // 组件的挂载
+      mountComponent(vm, el); // 组件的挂载
       // 最终可以获取render方法
     };
   }

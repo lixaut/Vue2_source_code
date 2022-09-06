@@ -74,7 +74,6 @@ export function compileToFunction(template) {
     let code = codegen(ast)
     code = `with(this){return ${code}}`
     let render = new Function(code) // 根据代码生成render函数
-    // console.log(render.toString())
     return render
 
     /*
