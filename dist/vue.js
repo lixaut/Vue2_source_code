@@ -391,6 +391,41 @@
     };
   });
 
+  var id$1 = 0;
+
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+
+      this.id = id$1++;
+      this.subs = []; // 存放当前属性的所有watcher
+    }
+
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        // this.subs.push(Dep.target) --> 会重复
+        Dep.target.addDep(this);
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          watcher.update();
+        });
+      }
+    }]);
+
+    return Dep;
+  }();
+
+  Dep.target = null;
+
   var Observer = /*#__PURE__*/function () {
     function Observer(data) {
       _classCallCheck(this, Observer);
@@ -435,10 +470,16 @@
     // 闭包 属性劫持
     observe(value); // 对所有属性进行劫持
 
+    var dep = new Dep(); // 对所有对象都进行属性劫持
+
     Object.defineProperty(target, key, {
       get: function get() {
         // 取值的时候会执行get
         // console.log('用户取值了')
+        if (Dep.target) {
+          dep.depend();
+        }
+
         return value;
       },
       set: function set(newValue) {
@@ -447,6 +488,7 @@
         if (newValue === value) return;
         observe(newValue);
         value = newValue;
+        dep.notify(); // 通知更新
       }
     });
   }
@@ -502,6 +544,49 @@
       proxy(vm, '_data', key);
     }
   }
+
+  var id = 0;
+
+  var Watcher = /*#__PURE__*/function () {
+    // 不同的组件有不同的watcher，
+    function Watcher(vm, fn, options) {
+      _classCallCheck(this, Watcher);
+
+      this.id = id++;
+      this.getter = fn;
+      this.renderWatcher = options;
+      this.deps = [];
+      this.depsId = new Set();
+      this.get();
+    }
+
+    _createClass(Watcher, [{
+      key: "get",
+      value: function get() {
+        Dep.target = this;
+        this.getter();
+        Dep.target = null;
+      }
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.deps.push(dep);
+          this.depsId.add(id);
+          dep.addSub(this); // watcher已经记住了dep，而且去重了，此时让dep也记住watcher
+        }
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        this.get(); // 更新渲染
+      }
+    }]);
+
+    return Watcher;
+  }(); // 需要给每个属性增加一个dep，目的就是收集watcher
 
   function createElementVNode(vm, tag, data) {
     if (data == null) {
@@ -624,10 +709,13 @@
   function mountComponent(vm, el) {
     vm.$el = el; // 1. 调用render 产生虚拟DOM
 
-    vm._update(vm._render()); // vm.$options.render() 虚拟节点
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
+
+    new Watcher(vm, updateComponent, true); // vm.$options.render() 虚拟节点
     // 2. 根据虚拟DOM产生真实DOM
     // 3 插入到el元素中
-
   }
 
   function initMixin(Vue) {

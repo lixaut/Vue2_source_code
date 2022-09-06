@@ -1,5 +1,5 @@
 
-import { observe } from "./observe/observe"
+import { observe } from "./observe"
 
 export function initState(vm) {
     const opts = vm.$options // 获取所有的选项

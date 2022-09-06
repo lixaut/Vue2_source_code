@@ -28,3 +28,16 @@ npm install rollup rollup-plugin-babel @babel/core @babel/preset-env --save-dev
     5. render函数会产生虚拟节点（使用响应数据）
     6. 根据生成的虚拟节点创造真实的DOM
 
+* vue中的依赖收集
+
+dep和watcher是一个多对多的关系
+
+一个属性可以在多个组件中使用：dep => 多个watcher
+
+一个组件中由多个属性组成：watcher => 多个dep
+
+* 观察者模式
+
+每个属性有一个dep（属性就是被观察者）
+
+watcher就是观察值（属性变化了就会通知观察者来更新）

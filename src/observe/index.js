@@ -1,4 +1,5 @@
 import { newArrayProto } from "./array"
+import Dep from "./dep"
 
 class Observer {
     constructor(data) {
@@ -28,9 +29,13 @@ class Observer {
 
 export function defineReactive(target, key, value) { // 闭包 属性劫持
     observe(value) // 对所有属性进行劫持
+    let dep = new Dep() // 对所有对象都进行属性劫持
     Object.defineProperty(target, key, {
         get() { // 取值的时候会执行get
             // console.log('用户取值了')
+            if (Dep.target) {
+                dep.depend()
+            }
             return value
         },
         set(newValue) { // 修改的时候会执行set
@@ -38,6 +43,7 @@ export function defineReactive(target, key, value) { // 闭包 属性劫持
             if(newValue === value) return
             observe(newValue)
             value = newValue
+            dep.notify() // 通知更新
         }
     })
 }
