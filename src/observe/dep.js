@@ -7,7 +7,6 @@ class Dep {
         this.subs = [] // 存放当前属性的所有watcher
     }
     depend() {
-
         // this.subs.push(Dep.target) --> 会重复
         Dep.target.addDep(this)
     }

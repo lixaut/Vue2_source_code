@@ -581,12 +581,95 @@
     }, {
       key: "update",
       value: function update() {
-        this.get(); // 更新渲染
+        // this.get() // 更新渲染
+        queueWatcher(this);
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        this.get();
       }
     }]);
 
     return Watcher;
-  }(); // 需要给每个属性增加一个dep，目的就是收集watcher
+  }();
+
+  var queue = [];
+  var has = {};
+  var pending = false; // 防抖
+
+  function flushSchedulerQueue() {
+    var flushQueue = queue.slice(0);
+    queue = [];
+    has = {};
+    pending = false;
+    flushQueue.forEach(function (q) {
+      return q.run();
+    });
+  }
+
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (!has[id]) {
+      queue.push(watcher);
+      has[id] = true; // 不管我们的update执行多少次，但最终只执行一轮刷新操作
+
+      if (!pending) {
+        nextTick(flushSchedulerQueue);
+        pending = true;
+      }
+    }
+  }
+
+  var callbacks = [];
+  var waiting = false;
+
+  function flushCallbacks() {
+    waiting = true;
+    var cbs = callbacks.slice(0);
+    callbacks = [];
+    cbs.forEach(function (cb) {
+      return cb();
+    });
+  }
+
+  var timerFunc;
+
+  if (Promise) {
+    timerFunc = function timerFunc() {
+      Promise.resolve().then(flushCallbacks);
+    };
+  } else if (MutationObserver) {
+    var observer = new MutationObserver(flushCallbacks); // 传入的回调是异步的
+
+    var textNode = document.createTextNode(1);
+    observer.observe(textNode, {
+      characterData: true
+    });
+
+    timerFunc = function timerFunc() {
+      textNode.textContent = 2;
+    };
+  } else if (setImmediate) {
+    timerFunc = function timerFunc() {
+      setImmediate(flushCallbacks);
+    };
+  } else {
+    timerFunc = function timerFunc() {
+      setTimeout(flushCallbacks);
+    };
+  } // nextTick不是创建了一个异步任务，将任务维护到了队列里
+
+
+  function nextTick(cb) {
+    callbacks.push(cb);
+
+    if (!waiting) {
+      timerFunc(flushCallbacks);
+      waiting = true;
+    }
+  } // 需要给每个属性增加一个dep，目的就是收集watcher
 
   function createElementVNode(vm, tag, data) {
     if (data == null) {
@@ -770,6 +853,7 @@
     this._init(options);
   }
 
+  Vue.prototype.$nextTick = nextTick;
   initMixin(Vue);
   initLifeCycle(Vue);
 
