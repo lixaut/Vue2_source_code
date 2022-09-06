@@ -1,7 +1,7 @@
 
 
 const attribute =
-    /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
+    /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>']+)))?/
 
 const ncname = '[a-zA-Z_][\\w\\-\\.]*'
 
@@ -13,7 +13,7 @@ const startTagClose = /^\s*(\/?)>/
 
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
 
-const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g
+export const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g
 
 // 对模板进行编译处理
 export function parseHTML(html) {
@@ -39,6 +39,7 @@ export function parseHTML(html) {
     function start(tag, attrs) {
         // console.log(tag, attrs, '开始')
         let node = createASTElement(tag, attrs) // 创造一个ast节点
+        // console.log(node)
         if (!root) { // 看一下是否是空树
             root = node // 如果为空则当前树是树的根节点
         }
@@ -84,11 +85,13 @@ export function parseHTML(html) {
             // 如果不是开始标签的结束，就一直匹配下去
             let attr, end;
             while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+                // console.log(typeof attr[3])
                 advance(attr[0].length)
                 match.attrs.push({
                     name: attr[1],
-                    value: attr[3] || attr[4] || attr[5]
+                    value: attr[3]
                 })
+                // console.log(match.attrs[1])
             }
             if (end) {
                 advance(end[0].length)
@@ -105,9 +108,11 @@ export function parseHTML(html) {
         let textEnd = html.indexOf('<')
         if (textEnd == 0) {
             const startTagMatch = parseStartTag() // 开始标签的匹配
+            // console.log(startTagMatch.attrs)
             if (startTagMatch) { // 解析到开始标签
                 // console.log(startTagMatch)
                 start(startTagMatch.tagName, startTagMatch.attrs)
+                // console.log(root)
                 continue;
             }
             let endTagMatch = html.match(endTag)
@@ -127,6 +132,6 @@ export function parseHTML(html) {
             }
         }
     }
-    
+    // console.log(root)
     return root
 }
