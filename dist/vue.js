@@ -325,7 +325,12 @@
     var ast = parseHTML(template); // console.log(ast)
     // 2. 生成render方法（render方法返回的结果就是 虚拟DOM
 
-    console.log(codegen(ast));
+    var code = codegen(ast);
+    code = "with(this){return ".concat(code, "}");
+    var render = new Function(code); // 根据代码生成render函数
+    // console.log(render.toString())
+
+    return render;
     /*
     render() {
         return _c(
@@ -499,6 +504,23 @@
     }
   }
 
+  function initLifeCycle(Vue) {
+    Vue.prototype._update = function () {
+      console.log('update');
+    };
+
+    Vue.prototype._render = function () {
+      console.log('render');
+    };
+  }
+  function mountComponent(vm, el) {
+    // 1. 调用render 产生虚拟DOM
+    vm._update(vm._render()); // vm.$options.render() 虚拟节点
+    // 2. 根据虚拟DOM产生真实DOM
+    // 3 插入到el元素中
+
+  }
+
   function initMixin(Vue) {
     // 给Vue增加init方法
     Vue.prototype._init = function (options) {
@@ -539,10 +561,10 @@
           var render = compileToFunction(template);
           ops.render = render;
         }
-      } // 最终可以获取render方法
+      }
 
-
-      ops.render;
+      mountComponent(vm); // 组件的挂载
+      // 最终可以获取render方法
     };
   }
 
@@ -552,6 +574,7 @@
   }
 
   initMixin(Vue);
+  initLifeCycle(Vue);
 
   return Vue;
 

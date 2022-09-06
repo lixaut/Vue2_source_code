@@ -71,7 +71,11 @@ export function compileToFunction(template) {
 
     // 2. 生成render方法（render方法返回的结果就是 虚拟DOM
 
-    console.log(codegen(ast))
+    let code = codegen(ast)
+    code = `with(this){return ${code}}`
+    let render = new Function(code) // 根据代码生成render函数
+    // console.log(render.toString())
+    return render
 
     /*
     render() {
