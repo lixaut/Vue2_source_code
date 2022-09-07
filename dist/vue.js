@@ -439,6 +439,7 @@
           ob.observeArray(inserted);
         }
 
+        ob.dep.notify();
         return result;
       };
     });
@@ -482,7 +483,9 @@
       function Observer(data) {
         _classCallCheck(this, Observer);
 
-        // 给数据加了一个标识，如果数据上有__ob__，则说明这个属性被观测了
+        // 给每个对象增加收集功能
+        this.dep = new Dep(); // 给数据加了一个标识，如果数据上有__ob__，则说明这个属性被观测了
+
         Object.defineProperty(data, '__ob__', {
           value: this,
           enumerable: false
@@ -518,9 +521,20 @@
       return Observer;
     }();
 
+    function dependArray(value) {
+      for (var i = 0; i < value.length; i++) {
+        var current = value[i];
+        current.__ob__ && current.__ob__.dep.depend();
+
+        if (Array.isArray(current)) {
+          dependArray(current);
+        }
+      }
+    }
+
     function defineReactive(target, key, value) {
       // 闭包 属性劫持
-      observe(value); // 对所有属性进行劫持
+      var childObj = observe(value); // 对所有属性进行劫持 用来收集依赖
 
       var dep = new Dep(); // 对所有对象都进行属性劫持
 
@@ -530,6 +544,14 @@
           // console.log('用户取值了')
           if (Dep.target) {
             dep.depend();
+
+            if (childObj) {
+              childObj.dep.depend();
+
+              if (Array.isArray(value)) {
+                dependArray(value);
+              }
+            }
           }
 
           return value;

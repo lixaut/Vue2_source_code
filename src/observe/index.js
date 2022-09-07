@@ -3,6 +3,8 @@ import Dep from "./dep"
 
 class Observer {
     constructor(data) {
+        // 给每个对象增加收集功能
+        this.dep = new Dep()
         // 给数据加了一个标识，如果数据上有__ob__，则说明这个属性被观测了
         Object.defineProperty(data, '__ob__', {
             value: this,
@@ -27,14 +29,30 @@ class Observer {
     }
 }
 
+function dependArray(value) {
+    for (let i = 0; i < value.length; i++) {
+        let current = value[i]
+        current.__ob__ && current.__ob__.dep.depend()
+        if (Array.isArray(current)) {
+            dependArray(current)
+        }
+    }
+}
+
 export function defineReactive(target, key, value) { // 闭包 属性劫持
-    observe(value) // 对所有属性进行劫持
+    let childObj = observe(value) // 对所有属性进行劫持 用来收集依赖
     let dep = new Dep() // 对所有对象都进行属性劫持
     Object.defineProperty(target, key, {
         get() { // 取值的时候会执行get
             // console.log('用户取值了')
             if (Dep.target) {
                 dep.depend()
+                if (childObj) {
+                    childObj.dep.depend()
+                    if (Array.isArray(value)) {
+                        dependArray(value)
+                    }
+                }
             }
             return value
         },
