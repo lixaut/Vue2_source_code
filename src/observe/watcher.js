@@ -1,4 +1,4 @@
-import Dep from "./dep"
+import Dep, { popTarget, pushTarget } from "./dep"
 
 let id = 0
 
@@ -9,12 +9,20 @@ class Watcher { // 不同的组件有不同的watcher，
         this.renderWatcher = options
         this.deps = []
         this.depsId = new Set()
-        this.get()
+        this.lazy = options.lazy
+        this.dirty = this.lazy
+        this.vm = vm
+        this.lazy ? undefined : this.get()
+    }
+    evaluate() {
+        this.value = this.get()
+        this.dirty = false
     }
     get() {
-        Dep.target = this
-        this.getter()
-        Dep.target = null
+        pushTarget(this)
+        let value = this.getter.call(this.vm)
+        popTarget()
+        return value
     }
     addDep(dep) {
         let id = dep.id
@@ -24,9 +32,20 @@ class Watcher { // 不同的组件有不同的watcher，
             dep.addSub(this) // watcher已经记住了dep，而且去重了，此时让dep也记住watcher
         }
     }
+    depend() {
+        let i = this.deps.length
+        while (i--) {
+            this.deps[i].depend()
+        }
+    }
     update() {
-        // this.get() // 更新渲染
-        queueWatcher(this)
+        if (this.lazy) {
+            // 如果是计算属性，依赖的值变化了，就标识计算属性是脏值
+            this.dirty = true
+        } else {
+            // this.get() // 更新渲染
+            queueWatcher(this)
+        }
     }
     run() {
         this.get()

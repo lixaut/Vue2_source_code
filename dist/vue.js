@@ -478,6 +478,15 @@
     }();
 
     Dep.target = null;
+    var stack = [];
+    function pushTarget(watcher) {
+      stack.push(watcher);
+      Dep.target = watcher;
+    }
+    function popTarget() {
+      stack.pop();
+      Dep.target = stack[stack.length - 1];
+    }
 
     var Observer = /*#__PURE__*/function () {
       function Observer(data) {
@@ -585,40 +594,6 @@
       return new Observer(data);
     }
 
-    function initState(vm) {
-      var opts = vm.$options; // 获取所有的选项
-
-      if (opts.data) {
-        initData(vm);
-      }
-    }
-
-    function proxy(vm, target, key) {
-      Object.defineProperty(vm, key, {
-        // vm.name
-        get: function get() {
-          return vm[target][key]; //vm._data.name
-        },
-        set: function set(newValue) {
-          vm[target][key] = newValue;
-        }
-      });
-    }
-
-    function initData(vm) {
-      var data = vm.$options.data; // data可能是函数和对象
-
-      data = typeof data === 'function' ? data.call(vm) : data; // console.log(data)
-      // 对数据进行劫持 vue2 里采用了一个api defineProperty
-
-      vm._data = data;
-      observe(data); // 将vm._data用vm来代理就可以
-
-      for (var key in data) {
-        proxy(vm, '_data', key);
-      }
-    }
-
     var id = 0;
 
     var Watcher = /*#__PURE__*/function () {
@@ -631,15 +606,25 @@
         this.renderWatcher = options;
         this.deps = [];
         this.depsId = new Set();
-        this.get();
+        this.lazy = options.lazy;
+        this.dirty = this.lazy;
+        this.vm = vm;
+        this.lazy ? undefined : this.get();
       }
 
       _createClass(Watcher, [{
+        key: "evaluate",
+        value: function evaluate() {
+          this.value = this.get();
+          this.dirty = false;
+        }
+      }, {
         key: "get",
         value: function get() {
-          Dep.target = this;
-          this.getter();
-          Dep.target = null;
+          pushTarget(this);
+          var value = this.getter.call(this.vm);
+          popTarget();
+          return value;
         }
       }, {
         key: "addDep",
@@ -653,10 +638,24 @@
           }
         }
       }, {
+        key: "depend",
+        value: function depend() {
+          var i = this.deps.length;
+
+          while (i--) {
+            this.deps[i].depend();
+          }
+        }
+      }, {
         key: "update",
         value: function update() {
-          // this.get() // 更新渲染
-          queueWatcher(this);
+          if (this.lazy) {
+            // 如果是计算属性，依赖的值变化了，就标识计算属性是脏值
+            this.dirty = true;
+          } else {
+            // this.get() // 更新渲染
+            queueWatcher(this);
+          }
         }
       }, {
         key: "run",
@@ -744,6 +743,88 @@
         waiting = true;
       }
     } // 需要给每个属性增加一个dep，目的就是收集watcher
+
+    function initState(vm) {
+      var opts = vm.$options; // 获取所有的选项
+
+      if (opts.data) {
+        initData(vm);
+      }
+
+      if (opts.computed) {
+        initComputed(vm);
+      }
+    }
+
+    function proxy(vm, target, key) {
+      Object.defineProperty(vm, key, {
+        // vm.name
+        get: function get() {
+          return vm[target][key]; //vm._data.name
+        },
+        set: function set(newValue) {
+          vm[target][key] = newValue;
+        }
+      });
+    }
+
+    function initData(vm) {
+      var data = vm.$options.data; // data可能是函数和对象
+
+      data = typeof data === 'function' ? data.call(vm) : data; // console.log(data)
+      // 对数据进行劫持 vue2 里采用了一个api defineProperty
+
+      vm._data = data;
+      observe(data); // 将vm._data用vm来代理就可以
+
+      for (var key in data) {
+        proxy(vm, '_data', key);
+      }
+    }
+
+    function initComputed(vm) {
+      var computed = vm.$options.computed;
+      var watchers = vm._computedWatchers = {};
+
+      for (var key in computed) {
+        var userDef = computed[key]; // 需要监控计算属性中get的变化
+
+        var fn = typeof userDef === 'function' ? userDef : userDef.get;
+        watchers[key] = new Watcher(vm, fn, {
+          lazy: true
+        });
+        defineComputed(vm, key, userDef);
+      }
+    }
+
+    function defineComputed(target, key, userDef) {
+      var setter = userDef.set || function () {}; // 可以通过实例拿到对应的属性
+
+
+      Object.defineProperty(target, key, {
+        get: createComputedGetter(key),
+        set: setter
+      });
+    }
+
+    function createComputedGetter(key) {
+      // 需要检查是否要执行这个getter
+      return function () {
+        var watcher = this._computedWatchers[key];
+
+        if (watcher.dirty) {
+          // 如果是脏的就去执行 用户传入的函数
+          watcher.evaluate();
+        }
+
+        if (Dep.target) {
+          // 计算属性出栈后，还有渲染watcher
+          watcher.depend();
+        }
+
+        return watcher.value;
+      };
+    }
 
     function createElementVNode(vm, tag, data) {
       if (data == null) {
@@ -892,7 +973,7 @@
         var vm = this;
         vm.$options = mergeOptions(this.constructor.options, options); // 将用户的选项挂载到实例上
 
-        callHook(vm, 'beforeCreate'); // 初始化状态
+        callHook(vm, 'beforeCreate'); // 初始化状态,初始化计算属性
 
         initState(vm);
         callHook(vm, 'created');
