@@ -1,4 +1,5 @@
 
+import { initGloablAPI } from "./gloablAPI"
 import { initMixin } from "./init"
 import { initLifeCycle } from "./lifecycle"
 import { nextTick } from "./observe/watcher"
@@ -9,7 +10,11 @@ function Vue(options) {  // options用户的选项
 }
 
 Vue.prototype.$nextTick = nextTick
+
 initMixin(Vue)
+
 initLifeCycle(Vue)
+
+initGloablAPI(Vue)
 
 export default Vue
