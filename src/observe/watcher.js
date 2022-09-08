@@ -3,16 +3,26 @@ import Dep, { popTarget, pushTarget } from "./dep"
 let id = 0
 
 class Watcher { // 不同的组件有不同的watcher，
-    constructor(vm, fn, options) {
+    constructor(vm, exprOrFn, options, cb) {
         this.id = id++
-        this.getter = fn
+
+        if (typeof exprOrFn === 'string') {
+            this.getter = function() {
+                return vm[exprOrFn]
+            }
+        } else {
+            this.getter = exprOrFn
+        }
+
         this.renderWatcher = options
         this.deps = []
         this.depsId = new Set()
         this.lazy = options.lazy
+        this.cb = cb
         this.dirty = this.lazy
         this.vm = vm
-        this.lazy ? undefined : this.get()
+        this.user = options.user
+        this.value = this.lazy ? undefined : this.get()
     }
     evaluate() {
         this.value = this.get()
@@ -48,7 +58,11 @@ class Watcher { // 不同的组件有不同的watcher，
         }
     }
     run() {
-        this.get()
+        let oldValue = this.value
+        let newValue = this.get()
+        if (this.user) {
+            this.cb.call(this.vm, newValue, oldValue)
+        }
     }
 }
 

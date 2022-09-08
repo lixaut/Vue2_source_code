@@ -5,11 +5,14 @@ import Watcher from "./observe/watcher"
 
 export function initState(vm) {
     const opts = vm.$options // 获取所有的选项
-    if(opts.data) {
+    if (opts.data) {
         initData(vm)
     }
     if (opts.computed) {
         initComputed(vm)
+    }
+    if (opts.watch) {
+        initWatch(vm)
     }
 }
 
@@ -34,10 +37,10 @@ function initData(vm) {
     observe(data)
 
     // 将vm._data用vm来代理就可以
-    for(let key in data) {
+    for (let key in data) {
         proxy(vm, '_data', key)
     }
-    
+
 }
 
 function initComputed(vm) {
@@ -48,14 +51,36 @@ function initComputed(vm) {
 
         // 需要监控计算属性中get的变化
         let fn = typeof userDef === 'function' ? userDef : userDef.get
-        watchers[key] = new Watcher(vm, fn, {lazy: true})
+        watchers[key] = new Watcher(vm, fn, { lazy: true })
 
         defineComputed(vm, key, userDef)
     }
 }
 
+function initWatch(vm) {
+    let watch = vm.$options.watch
+    for (let key in watch) {
+        const handler = watch[key]
+        if (Array.isArray(handler)) {
+            for (let i = 0; i < handler.length; i++) {
+                createWatcher(vm, key, handler[i])
+            }
+        } else {
+            createWatcher(vm, key, handler)
+        }
+    }
+}
+
+function createWatcher(vm, key, handler) {
+    // 字符串 函数
+    if (typeof handler === 'string') {
+        handler = vm[handler]
+    }
+    return vm.$watch(key, handler)
+}
+
 function defineComputed(target, key, userDef) {
-    const setter = userDef.set || (() => {})
+    const setter = userDef.set || (() => { })
 
     // 可以通过实例拿到对应的属性
     Object.defineProperty(target, key, {
@@ -66,7 +91,7 @@ function defineComputed(target, key, userDef) {
 
 function createComputedGetter(key) {
     // 需要检查是否要执行这个getter
-    return function() {
+    return function () {
         const watcher = this._computedWatchers[key]
         if (watcher.dirty) {
             // 如果是脏的就去执行 用户传入的函数
