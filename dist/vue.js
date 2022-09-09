@@ -1117,10 +1117,10 @@
   var preVnode = render1.call(vm1);
   var el = createElm(preVnode);
   document.body.appendChild(el);
-  var render2 = compileToFunction("<li key=\"b\" style=\"color:red;background:blue\">{{name}}</li>");
+  var render2 = compileToFunction("<li key=\"a\" style=\"color:red;background:blue\">{{name}}</li>");
   var vm2 = new Vue({
     data: {
-      name: 'zf'
+      name: 'zhu'
     }
   });
   var nextVnode = render2.call(vm2);

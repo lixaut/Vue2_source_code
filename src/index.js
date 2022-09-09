@@ -27,8 +27,8 @@ let preVnode = render1.call(vm1)
 let el = createElm(preVnode)
 document.body.appendChild(el)
 
-let render2 = compileToFunction(`<li key="b" style="color:red;background:blue">{{name}}</li>`)
-let vm2 =new Vue({data: {name: 'zf'}})
+let render2 = compileToFunction(`<li key="a" style="color:red;background:blue">{{name}}</li>`)
+let vm2 =new Vue({data: {name: 'zhu'}})
 let nextVnode = render2.call(vm2)
 
 setTimeout(() => {
