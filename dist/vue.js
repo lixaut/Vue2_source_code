@@ -914,6 +914,10 @@
       text: text
     };
   }
+
+  function isSameVnode(vnode1, vnode2) {
+    return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key;
+  }
   /*
       1. ast做的是语法层面的转化，描述的是语法本身
       2. 虚拟DOM，描述的是DOM元素，可以增加一些自定义属性
@@ -967,6 +971,23 @@
       parentElm.removeChild(elm); // 删除老节点
 
       return newElm;
+    } else {
+      // diff算法
+      if (!isSameVnode(oldVNode, vnode)) {
+        // 用老节点的父亲替换
+        var el = createElm(vnode);
+        oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
+        return el;
+      }
+
+      vnode.el = oldVNode.el; // 复用老节点的元素
+      // 文本的情况
+
+      if (!oldVNode.tag) {
+        if (oldVNode.text !== vnode.text) {
+          oldVNode.el.textContent = vnode.text; // 用新的覆盖老的
+        }
+      }
     }
   }
 
@@ -1084,14 +1105,25 @@
   initStateMixin(Vue); // nextTick 和 $watch
   // 测试：为了方便观察前后的虚拟节点变化
 
-  var render1 = compileToFunction("<div>{{name}}</div>");
+  var render1 = compileToFunction("<li key=\"a\" style=\"color:red\">{{name}}</li>");
   var vm1 = new Vue({
     data: {
       name: 'zhu'
     }
   });
-  var preNode = render1.call(vm1);
-  console.log(preNode);
+  var preVnode = render1.call(vm1);
+  var el = createElm(preVnode);
+  document.body.appendChild(el);
+  var render2 = compileToFunction("<span key=\"b\" style=\"color:red;background:blue\">{{name}}</span>");
+  var vm2 = new Vue({
+    data: {
+      name: 'zf'
+    }
+  });
+  var nextVnode = render2.call(vm2);
+  setTimeout(function () {
+    patch(preVnode, nextVnode);
+  }, 1000);
 
   return Vue;
 

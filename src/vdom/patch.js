@@ -1,3 +1,4 @@
+import { isSameVnode } from "."
 
 
 export function createElm(vnode) {
@@ -42,5 +43,20 @@ export function patch(oldVNode, vnode) {
         return newElm
     } else {
         // diff算法
+        if (!isSameVnode(oldVNode, vnode)) {
+            // 用老节点的父亲替换
+            let el = createElm(vnode)
+            oldVNode.el.parentNode.replaceChild(el, oldVNode.el)
+            return el
+        }
+
+        vnode.el = oldVNode.el // 复用老节点的元素
+        // 文本的情况
+        if (!oldVNode.tag) {
+            if (oldVNode.text !== vnode.text) {
+                oldVNode.el.textContent = vnode.text // 用新的覆盖老的
+
+            }
+        }
     }
 }
