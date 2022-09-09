@@ -987,7 +987,10 @@
         if (oldVNode.text !== vnode.text) {
           oldVNode.el.textContent = vnode.text; // 用新的覆盖老的
         }
-      }
+      } // 是标签 我们需要比对标签的属性
+
+
+      console.log(oldVNode, vnode);
     }
   }
 
@@ -1114,7 +1117,7 @@
   var preVnode = render1.call(vm1);
   var el = createElm(preVnode);
   document.body.appendChild(el);
-  var render2 = compileToFunction("<span key=\"b\" style=\"color:red;background:blue\">{{name}}</span>");
+  var render2 = compileToFunction("<li key=\"b\" style=\"color:red;background:blue\">{{name}}</li>");
   var vm2 = new Vue({
     data: {
       name: 'zf'

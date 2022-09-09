@@ -58,5 +58,7 @@ export function patch(oldVNode, vnode) {
 
             }
         }
+        // 是标签 我们需要比对标签的属性
+        console.log(oldVNode, vnode)
     }
 }
