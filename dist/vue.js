@@ -934,7 +934,7 @@
       // 将虚拟节点和真实节点对应起来
       vnode.el = document.createElement(tag); // 更新属性
 
-      patchProps(vnode.el, data);
+      patchProps(vnode.el, {}, data);
       children.forEach(function (child) {
         vnode.el.appendChild(createElm(child));
       });
@@ -944,16 +944,34 @@
 
     return vnode.el;
   }
-  function patchProps(el, props) {
-    for (var key in props) {
-      if (key === 'style') {
+  function patchProps(el, oldProps, props) {
+    var oldStyles = oldProps.style || {};
+    var newStyles = props.style || {};
+
+    for (var key in oldStyles) {
+      if (!newStyles[key]) {
+        // 老的样式中有新的吗，没有则删除
+        el.style[key] = '';
+      }
+    }
+
+    for (var _key in oldProps) {
+      if (!props[_key]) {
+        // 用新的覆盖老的
+        el.removeAttribute(_key);
+      }
+    }
+
+    for (var _key2 in props) {
+      if (_key2 === 'style') {
         for (var styleName in props.style) {
           el.style[styleName] = props.style[styleName];
         }
       } else {
-        el.setAttribute(key, props[key]);
+        el.setAttribute(_key2, props[_key2]);
       }
-    }
+    } // 老的属性中有要删除的
+
   }
   function patch(oldVNode, vnode) {
     // 初始渲染流程
@@ -973,25 +991,64 @@
       return newElm;
     } else {
       // diff算法
-      if (!isSameVnode(oldVNode, vnode)) {
-        // 用老节点的父亲替换
-        var el = createElm(vnode);
-        oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
-        return el;
-      }
-
-      vnode.el = oldVNode.el; // 复用老节点的元素
-      // 文本的情况
-
-      if (!oldVNode.tag) {
-        if (oldVNode.text !== vnode.text) {
-          oldVNode.el.textContent = vnode.text; // 用新的覆盖老的
-        }
-      } // 是标签 我们需要比对标签的属性
-
-
-      console.log(oldVNode, vnode);
+      return patchVnode(oldVNode, vnode);
     }
+  }
+
+  function patchVnode(oldVNode, vnode) {
+    if (!isSameVnode(oldVNode, vnode)) {
+      // 用老节点的父亲替换
+      var _el = createElm(vnode);
+
+      oldVNode.el.parentNode.replaceChild(_el, oldVNode.el);
+      return _el;
+    }
+
+    var el = vnode.el = oldVNode.el; // 复用老节点的元素
+    // 文本的情况
+
+    if (!oldVNode.tag) {
+      if (oldVNode.text !== vnode.text) {
+        oldVNode.el.textContent = vnode.text; // 用新的覆盖老的
+      }
+    } // 是标签 我们需要比对标签的属性
+
+
+    patchProps(el, oldVNode.data, vnode.data); // 比较儿子节点（单方有，双方有）
+
+    var oldChildren = oldVNode.children || [];
+    var newChildren = vnode.children || [];
+
+    if (oldChildren.length > 0 && newChildren.length > 0) {
+      // 完整的diff算法，需要比较两个儿子
+      updateChildren(el, oldChildren, newChildren);
+    } else if (newChildren.length > 0) {
+      // 没有老的，只有新的
+      mountChildren(el, newChildren);
+    } else if (oldChildren.length > 0) {
+      // 新的没有，删除老的
+      el.innerHTML = '';
+    }
+
+    return el;
+  }
+
+  function mountChildren(el, newChildren) {
+    for (var i = 0; i < newChildren.length; i++) {
+      var child = newChildren[i];
+      el.appendChild(createElm(child));
+    }
+  }
+
+  function updateChildren(el, oldChildren, newChildren) {
+    var oldEndIndex = oldChildren.length - 1;
+    var newEndIndex = newChildren.length - 1;
+    var oldStartVnode = oldChildren[0];
+    var newStartVnode = newChildren[0];
+    var oldEndVnode = oldChildren[oldEndIndex];
+    var newEndVnode = newChildren[newEndIndex];
+
+    console.log(oldStartVnode, newStartVnode, oldEndVnode, newEndVnode);
   }
 
   function initLifeCycle(Vue) {
@@ -1108,7 +1165,7 @@
   initStateMixin(Vue); // nextTick 和 $watch
   // 测试：为了方便观察前后的虚拟节点变化
 
-  var render1 = compileToFunction("<li key=\"a\" style=\"color:red\">{{name}}</li>");
+  var render1 = compileToFunction("<ul style=\"color:red\">\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n</ul>");
   var vm1 = new Vue({
     data: {
       name: 'zhu'
@@ -1117,7 +1174,7 @@
   var preVnode = render1.call(vm1);
   var el = createElm(preVnode);
   document.body.appendChild(el);
-  var render2 = compileToFunction("<li key=\"a\" style=\"color:red;background:blue\">{{name}}</li>");
+  var render2 = compileToFunction("<ul style=\"color:blue;background:red\">\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n    <li key=\"d\">d</li>\n</ul>");
   var vm2 = new Vue({
     data: {
       name: 'zhu'
