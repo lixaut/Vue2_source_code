@@ -944,7 +944,9 @@
 
     return vnode.el;
   }
-  function patchProps(el, oldProps, props) {
+  function patchProps(el) {
+    var oldProps = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var props = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var oldStyles = oldProps.style || {};
     var newStyles = props.style || {};
 
@@ -1041,6 +1043,10 @@
   }
 
   function updateChildren(el, oldChildren, newChildren) {
+    // 我们操作列表，经常会有push shift unshift pop 这些方法，针对这些情况做一些优化
+    // vue2中采用上指针的方式，比较两个节点
+    var oldStartIndex = 0;
+    var newStartIndex = 0;
     var oldEndIndex = oldChildren.length - 1;
     var newEndIndex = newChildren.length - 1;
     var oldStartVnode = oldChildren[0];
@@ -1048,7 +1054,82 @@
     var oldEndVnode = oldChildren[oldEndIndex];
     var newEndVnode = newChildren[newEndIndex];
 
-    console.log(oldStartVnode, newStartVnode, oldEndVnode, newEndVnode);
+    function makeIndexByKey(children) {
+      var map = {};
+      children.forEach(function (child, index) {
+        if (child.key) {
+          map[child.key] = index;
+        }
+      });
+      return map;
+    }
+
+    var map = makeIndexByKey(oldChildren);
+    console.log(oldChildren);
+
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+      // 双方有一方头指针，大于尾部指针停止循环
+      if (!oldStartVnode) {
+        oldStartVnode = oldChildren[++oldStartIndex];
+      } else if (!oldEndVnode) {
+        oldEndVnode = oldChildren[--oldEndIndex];
+      } // 先比较头指针
+      else if (isSameVnode(oldStartVnode, newStartVnode)) {
+        patchVnode(oldStartVnode, newStartVnode);
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } // 先比较尾指针
+      else if (isSameVnode(oldEndVnode, newEndVnode)) {
+        patchVnode(oldEndVnode, newEndVnode);
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      } // 交叉比对 abcd <-> dcba
+      else if (isSameVnode(oldEndVnode, newStartVnode)) {
+        patchVnode(oldEndVnode, newStartVnode);
+        el.insertBefore(oldEndVnode.el, oldStartVnode.el);
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } else if (isSameVnode(oldStartVnode, newEndVnode)) {
+        patchVnode(oldStartVnode, newEndVnode);
+        el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling);
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      }
+
+      var moveIndex = map[newStartVnode.key];
+
+      if (moveIndex !== undefined) {
+        var moveVnode = oldChildren[moveIndex];
+        el.insertBefore(moveVnode.el, oldStartVnode.el);
+        oldChildren[moveIndex] = undefined;
+        patchVnode(moveVnode, newStartVnode);
+      } else {
+        el.insertBefore(createElm(newStartVnode), oldStartVnode.el);
+      }
+
+      newStartVnode = newChildren[++newStartIndex];
+    } // 新的多余，需要插入
+
+
+    if (newStartIndex <= newEndIndex) {
+      for (var i = newStartIndex; i <= newEndIndex; i++) {
+        var childEl = createElm(newChildren[i]); // 可能向前追加，也可能向后追加
+
+        var anchor = newChildren[newEndIndex + 1] ? newChildren[newEndIndex + 1].el : null; // 获取下一个元素
+
+        el.insertBefore(childEl, anchor); // el.appendChild(childEl)
+      }
+    } // 老的多了，需要删除
+
+
+    if (oldStartIndex <= oldEndIndex) {
+      for (var _i = oldStartIndex; _i <= oldEndIndex; _i++) {
+        if (oldChildren[_i]) {
+          var _childEl = oldChildren[_i].el;
+          el.removeChild(_childEl);
+        }
+      }
+    }
   }
 
   function initLifeCycle(Vue) {
@@ -1165,7 +1246,7 @@
   initStateMixin(Vue); // nextTick 和 $watch
   // 测试：为了方便观察前后的虚拟节点变化
 
-  var render1 = compileToFunction("<ul style=\"color:red\">\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n</ul>");
+  var render1 = compileToFunction("<ul style=\"color:red\">\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n    <li key=\"d\">d</li>\n</ul>");
   var vm1 = new Vue({
     data: {
       name: 'zhu'
@@ -1174,7 +1255,7 @@
   var preVnode = render1.call(vm1);
   var el = createElm(preVnode);
   document.body.appendChild(el);
-  var render2 = compileToFunction("<ul style=\"color:blue;background:red\">\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n    <li key=\"d\">d</li>\n</ul>");
+  var render2 = compileToFunction("<ul style=\"color:blue;background:red\">\n    <li key=\"b\">b</li> \n    <li key=\"m\">m</li>\n    <li key=\"a\">a</li>\n    <li key=\"p\">p</li>\n    <li key=\"c\">c</li>\n    <li key=\"q\">q</li>\n</ul>");
   var vm2 = new Vue({
     data: {
       name: 'zhu'

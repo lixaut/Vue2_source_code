@@ -19,7 +19,7 @@ export function createElm(vnode) {
     return vnode.el
 }
 
-export function patchProps(el, oldProps, props) {
+export function patchProps(el, oldProps={}, props={}) {
     let oldStyles = oldProps.style || {}
     let newStyles = props.style || {}
     for (let key in oldStyles) {
@@ -117,8 +117,91 @@ function updateChildren(el, oldChildren, newChildren) {
     let oldEndVnode = oldChildren[oldEndIndex]
     let newEndVnode = newChildren[newEndIndex]
 
+    function makeIndexByKey(children) {
+        let map = {}
+        children.forEach((child, index) => {
+            if (child.key) {
+                map[child.key] = index 
+            }
+        })
+        return map
+    }
+    let map = makeIndexByKey(oldChildren)
+    console.log(oldChildren)
+
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
         // 双方有一方头指针，大于尾部指针停止循环
+
+        if (!oldStartVnode) {
+            oldStartVnode = oldChildren[++oldStartIndex]
+        } else if (!oldEndVnode) {
+            oldEndVnode = oldChildren[--oldEndIndex]
+        }
+
+        // 先比较头指针
+        else if (isSameVnode(oldStartVnode, newStartVnode)) {
+            patchVnode(oldStartVnode, newStartVnode)
+            oldStartVnode = oldChildren[++oldStartIndex]
+            newStartVnode = newChildren[++newStartIndex]
+        }
+
+        // 先比较尾指针
+        else if (isSameVnode(oldEndVnode, newEndVnode)) {
+            patchVnode(oldEndVnode, newEndVnode)
+            oldEndVnode = oldChildren[--oldEndIndex]
+            newEndVnode = newChildren[--newEndIndex]
+        }
+
+        // 交叉比对 abcd <-> dcba
+        else if (isSameVnode(oldEndVnode, newStartVnode)) {
+            patchVnode(oldEndVnode, newStartVnode)
+            el.insertBefore(oldEndVnode.el, oldStartVnode.el)
+            oldEndVnode = oldChildren[--oldEndIndex]
+            newStartVnode = newChildren[++newStartIndex]
+        }
+
+        else if (isSameVnode(oldStartVnode, newEndVnode)) {
+            patchVnode(oldStartVnode, newEndVnode)
+            el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling)
+            oldStartVnode = oldChildren[++oldStartIndex]
+            newEndVnode = newChildren[--newEndIndex]
+        }
+
+        let moveIndex = map[newStartVnode.key]
+        if (moveIndex !== undefined) {
+            let moveVnode = oldChildren[moveIndex]
+            el.insertBefore(moveVnode.el, oldStartVnode.el)
+            oldChildren[moveIndex] = undefined
+            patchVnode(moveVnode, newStartVnode)
+
+        } else {
+            el.insertBefore(createElm(newStartVnode), oldStartVnode.el)
+        }
+        newStartVnode = newChildren[++newStartIndex]
+
     }
-    console.log(oldStartVnode, newStartVnode, oldEndVnode, newEndVnode)
+    
+    // 新的多余，需要插入
+    if (newStartIndex <= newEndIndex) { 
+        for (let i = newStartIndex; i <= newEndIndex; i++) {
+            let childEl = createElm(newChildren[i])
+            // 可能向前追加，也可能向后追加
+
+            let anchor = newChildren[newEndIndex + 1] ?
+            newChildren[newEndIndex + 1].el : null // 获取下一个元素
+            el.insertBefore(childEl, anchor)
+
+            // el.appendChild(childEl)
+        }
+    }
+
+    // 老的多了，需要删除
+    if (oldStartIndex <= oldEndIndex) { 
+        for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+            if (oldChildren[i]) {
+                let childEl = oldChildren[i].el
+                el.removeChild(childEl)
+            }
+        }
+    }
 }
