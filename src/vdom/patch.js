@@ -2,7 +2,8 @@ import { isSameVnode } from "."
 
 
 export function createElm(vnode) {
-    let { tag, data, children, text } = vnode
+    // console.log(vnode)
+    let { tag , data, children, text } = vnode
     if (typeof tag === 'string') {// 标签
         // 将虚拟节点和真实节点对应起来
         vnode.el = document.createElement(tag)
@@ -16,6 +17,7 @@ export function createElm(vnode) {
     } else {
         vnode.el = document.createTextNode(text)
     }
+    // console.log(vnode.el)
     return vnode.el
 }
 
@@ -116,28 +118,28 @@ function updateChildren(el, oldChildren, newChildren) {
     let oldEndVnode = oldChildren[oldEndIndex]
     let newEndVnode = newChildren[newEndIndex]
 
-    function makeIndexByKey(children) {
-        let map = {}
-        children.forEach((child, index) => {
-            if (child.key) {
-                map[child.key] = index 
-            }
-        })
-        return map
-    }
-    let map = makeIndexByKey(oldChildren)
+    // function makeIndexByKey(children) {
+    //     let map = {}
+    //     children.forEach((child, index) => {
+    //         if (child.key) {
+    //             map[child.key] = index 
+    //         }
+    //     })
+    //     return map
+    // }
+    // let map = makeIndexByKey(oldChildren)
 
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
         // 双方有一方头指针，大于尾部指针停止循环
 
-        if (!oldStartVnode) {
-            oldStartVnode = oldChildren[++oldStartIndex]
-        } else if (!oldEndVnode) {
-            oldEndVnode = oldChildren[--oldEndIndex]
-        }
+        // if (!oldStartVnode) {
+        //     oldStartVnode = oldChildren[++oldStartIndex]
+        // } else if (!oldEndVnode) {
+        //     oldEndVnode = oldChildren[--oldEndIndex]
+        // }
 
         // 先比较头指针
-        else if (isSameVnode(oldStartVnode, newStartVnode)) {
+        if (isSameVnode(oldStartVnode, newStartVnode)) {
             patchVnode(oldStartVnode, newStartVnode)
             oldStartVnode = oldChildren[++oldStartIndex]
             newStartVnode = newChildren[++newStartIndex]
@@ -166,17 +168,18 @@ function updateChildren(el, oldChildren, newChildren) {
         }
 
         // debugger
-        let moveIndex = map[newStartVnode.key]
-        if (moveIndex !== undefined) {
-            let moveVnode = oldChildren[moveIndex]
-            el.insertBefore(moveVnode.el, oldStartVnode.el)
-            oldChildren[moveIndex] = undefined
-            patchVnode(moveVnode, newStartVnode)
+        // console.log(newStartVnode, newStartIndex)
+        // let moveIndex = map[newStartVnode && newStartVnode.key]
+        // if (moveIndex !== undefined) {
+        //     let moveVnode = oldChildren[moveIndex]
+        //     el.insertBefore(moveVnode.el, oldStartVnode.el)
+        //     oldChildren[moveIndex] = undefined
+        //     patchVnode(moveVnode, newStartVnode)
 
-        } else {
-            el.insertBefore(createElm(newStartVnode), oldStartVnode.el)
-        }
-        newStartVnode = newChildren[++newStartIndex]
+        // } else {
+        //     el.insertBefore(createElm(newStartVnode), oldStartVnode.el)
+        // }
+        // newStartVnode = newChildren[++newStartIndex]
 
     }
     

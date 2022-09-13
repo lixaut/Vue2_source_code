@@ -33,12 +33,10 @@ let el = createElm(preVnode)
 document.body.appendChild(el)
 
 let render2 = compileToFunction(`<ul style="color:blue;background:red">
-    <li key="b">b</li> 
-    <li key="m">m</li>
-    <li key="a">a</li>
-    <li key="p">p</li>
+    <li key="d">d</li>
     <li key="c">c</li>
-    <li key="q">q</li>
+    <li key="b">b</li>
+    <li key="a">a</li>
 </ul>`)
 let vm2 =new Vue({data: {name: 'zhu'}})
 let nextVnode = render2.call(vm2)

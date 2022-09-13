@@ -924,6 +924,7 @@
   */
 
   function createElm(vnode) {
+    // console.log(vnode)
     var tag = vnode.tag,
         data = vnode.data,
         children = vnode.children,
@@ -940,7 +941,8 @@
       });
     } else {
       vnode.el = document.createTextNode(text);
-    }
+    } // console.log(vnode.el)
+
 
     return vnode.el;
   }
@@ -1052,28 +1054,26 @@
     var oldStartVnode = oldChildren[0];
     var newStartVnode = newChildren[0];
     var oldEndVnode = oldChildren[oldEndIndex];
-    var newEndVnode = newChildren[newEndIndex];
-
-    function makeIndexByKey(children) {
-      var map = {};
-      children.forEach(function (child, index) {
-        if (child.key) {
-          map[child.key] = index;
-        }
-      });
-      return map;
-    }
-
-    var map = makeIndexByKey(oldChildren);
+    var newEndVnode = newChildren[newEndIndex]; // function makeIndexByKey(children) {
+    //     let map = {}
+    //     children.forEach((child, index) => {
+    //         if (child.key) {
+    //             map[child.key] = index 
+    //         }
+    //     })
+    //     return map
+    // }
+    // let map = makeIndexByKey(oldChildren)
 
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
       // 双方有一方头指针，大于尾部指针停止循环
-      if (!oldStartVnode) {
-        oldStartVnode = oldChildren[++oldStartIndex];
-      } else if (!oldEndVnode) {
-        oldEndVnode = oldChildren[--oldEndIndex];
-      } // 先比较头指针
-      else if (isSameVnode(oldStartVnode, newStartVnode)) {
+      // if (!oldStartVnode) {
+      //     oldStartVnode = oldChildren[++oldStartIndex]
+      // } else if (!oldEndVnode) {
+      //     oldEndVnode = oldChildren[--oldEndIndex]
+      // }
+      // 先比较头指针
+      if (isSameVnode(oldStartVnode, newStartVnode)) {
         patchVnode(oldStartVnode, newStartVnode);
         oldStartVnode = oldChildren[++oldStartIndex];
         newStartVnode = newChildren[++newStartIndex];
@@ -1094,20 +1094,18 @@
         oldStartVnode = oldChildren[++oldStartIndex];
         newEndVnode = newChildren[--newEndIndex];
       } // debugger
+      // console.log(newStartVnode, newStartIndex)
+      // let moveIndex = map[newStartVnode && newStartVnode.key]
+      // if (moveIndex !== undefined) {
+      //     let moveVnode = oldChildren[moveIndex]
+      //     el.insertBefore(moveVnode.el, oldStartVnode.el)
+      //     oldChildren[moveIndex] = undefined
+      //     patchVnode(moveVnode, newStartVnode)
+      // } else {
+      //     el.insertBefore(createElm(newStartVnode), oldStartVnode.el)
+      // }
+      // newStartVnode = newChildren[++newStartIndex]
 
-
-      var moveIndex = map[newStartVnode.key];
-
-      if (moveIndex !== undefined) {
-        var moveVnode = oldChildren[moveIndex];
-        el.insertBefore(moveVnode.el, oldStartVnode.el);
-        oldChildren[moveIndex] = undefined;
-        patchVnode(moveVnode, newStartVnode);
-      } else {
-        el.insertBefore(createElm(newStartVnode), oldStartVnode.el);
-      }
-
-      newStartVnode = newChildren[++newStartIndex];
     } // 新的多余，需要插入
 
 
@@ -1255,7 +1253,7 @@
   var preVnode = render1.call(vm1);
   var el = createElm(preVnode);
   document.body.appendChild(el);
-  var render2 = compileToFunction("<ul style=\"color:blue;background:red\">\n    <li key=\"b\">b</li> \n    <li key=\"m\">m</li>\n    <li key=\"a\">a</li>\n    <li key=\"p\">p</li>\n    <li key=\"c\">c</li>\n    <li key=\"q\">q</li>\n</ul>");
+  var render2 = compileToFunction("<ul style=\"color:blue;background:red\">\n    <li key=\"d\">d</li>\n    <li key=\"c\">c</li>\n    <li key=\"b\">b</li>\n    <li key=\"a\">a</li>\n</ul>");
   var vm2 = new Vue({
     data: {
       name: 'zhu'
