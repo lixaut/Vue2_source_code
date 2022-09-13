@@ -366,6 +366,18 @@
         }
       };
     });
+
+    strats.components = function (parentVal, childVal) {
+      var res = Object.create(parentVal);
+
+      if (childVal) {
+        for (var key in childVal) {
+          // 返回的是构造的对象，可以拿到父亲原型上的属性，并将儿子的拷贝到自己身上
+          res[key] = childVal[key];
+        }
+      }
+    };
+
     var options = {};
 
     for (var key in parent) {
@@ -393,12 +405,36 @@
 
   function initGloablAPI(Vue) {
     // 静态方法
-    Vue.options = {};
+    Vue.options = {
+      _base: Vue
+    };
 
     Vue.mixin = function (mixin) {
       // 我们期望将用户的选项和全局的options进行合并
       this.options = mergeOptions(this.options, mixin);
       return this;
+    };
+
+    Vue.extend = function (options) {
+      // 实现根据用户的参数返回一个构造函数
+      function Sub() {
+        var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+        this._init(options);
+      }
+
+      Sub.prototype = Object.create(Vue.prototype);
+      Sub.prototype.constructor = Sub;
+      Sub.options = mergeOptions(Vue.options, options); // 保存用户传递的选项
+
+      return Sub;
+    };
+
+    Vue.options.conponents = {};
+
+    Vue.component = function (id, definition) {
+      definition = typeof definition === 'function' ? definition : Vue.extend(definition);
+      Vue.options.component[id] = definition;
     };
   }
 
@@ -883,6 +919,10 @@
     };
   }
 
+  var isReservedTag = function isReservedTag(tag) {
+    return ['a', 'div', 'p', 'button', 'ul', 'li', 'span'].includes(tag);
+  };
+
   function createElementVNode(vm, tag, data) {
     if (data == null) {
       data = {};
@@ -898,20 +938,43 @@
       children[_key - 3] = arguments[_key];
     }
 
-    return vnode(vm, tag, key, data, children);
+    if (isReservedTag(tag)) {
+      return vnode(vm, tag, key, data, children);
+    } else {
+      // 创造一个组件的虚拟节点（包含组件的构造函数）
+      var Ctor = vm.$options.components[tag]; // 组建的构造函数
+
+      return createComponentVnode(vm, tag, key, data, children, Ctor);
+    }
   }
+
+  function createComponentVnode(vm, tag, key, data, children, Ctor) {
+    if (_typeof(Ctor) === 'object') {
+      Ctor = vm.$options._base.extend(Ctor);
+    }
+
+    data.hook = {
+      init: function init() {}
+    };
+    return vnode(vm, tag, key, data, children, null, {
+      Ctor: Ctor
+    });
+  }
+
   function createTextVNode(vm, text) {
     return vnode(vm, undefined, undefined, undefined, undefined, text);
   }
 
-  function vnode(vm, tag, key, data, children, text) {
+  function vnode(vm, tag, key, data, children, text, componentOptions) {
     return {
       vm: vm,
       tag: tag,
       key: key,
       data: data,
       children: children,
-      text: text
+      text: text,
+      componentOptions: componentOptions // 组件的构造函数
+
     };
   }
 
