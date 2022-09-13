@@ -20,28 +20,28 @@ initGloablAPI(Vue) // 全局API实现
 initStateMixin(Vue) // nextTick 和 $watch
 
 // 测试：为了方便观察前后的虚拟节点变化
-let render1 = compileToFunction(`<ul style="color:red">
-    <li key="a">a</li>
-    <li key="b">b</li>
-    <li key="c">c</li>
-    <li key="d">d</li>
-</ul>`)
-let vm1 = new Vue({data: {name: 'zhu'}})
-let preVnode = render1.call(vm1)
+// let render1 = compileToFunction(`<ul style="color:red">
+//     <li key="a">a</li>
+//     <li key="b">b</li>
+//     <li key="c">c</li>
+//     <li key="d">d</li>
+// </ul>`)
+// let vm1 = new Vue({data: {name: 'zhu'}})
+// let preVnode = render1.call(vm1)
 
-let el = createElm(preVnode)
-document.body.appendChild(el)
+// let el = createElm(preVnode)
+// document.body.appendChild(el)
 
-let render2 = compileToFunction(`<ul style="color:blue;background:red">
-    <li key="d">d</li>
-    <li key="c">c</li>
-    <li key="b">b</li>
-    <li key="a">a</li>
-</ul>`)
-let vm2 =new Vue({data: {name: 'zhu'}})
-let nextVnode = render2.call(vm2)
+// let render2 = compileToFunction(`<ul style="color:blue;background:red">
+//     <li key="d">d</li>
+//     <li key="c">c</li>
+//     <li key="b">b</li>
+//     <li key="a">a</li>
+// </ul>`)
+// let vm2 =new Vue({data: {name: 'zhu'}})
+// let nextVnode = render2.call(vm2)
 
-setTimeout(() => {
-    patch(preVnode, nextVnode)
-}, 1000)
+// setTimeout(() => {
+//     patch(preVnode, nextVnode)
+// }, 1000)
 export default Vue

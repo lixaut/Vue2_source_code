@@ -1134,9 +1134,17 @@
     Vue.prototype._update = function (vnode) {
       // 将虚拟DOM转化成真实DOM
       var vm = this;
-      var el = vm.$el; // patch既有初始化的功能，又有更新的功能
+      var el = vm.$el; // 把组件第一次生产的虚拟节点保存到_vnode上
 
-      vm.$el = patch(el, vnode);
+      var prevVnode = vm._vnode;
+      vm._vnode = vnode;
+
+      if (prevVnode) {
+        // 之前渲染过了
+        vm.$el = patch(prevVnode, vnode);
+      } else {
+        vm.$el = patch(el, vnode);
+      }
     }; // _c('div', {}, ...children)
 
 
@@ -1242,27 +1250,6 @@
   initGloablAPI(Vue); // 全局API实现
 
   initStateMixin(Vue); // nextTick 和 $watch
-  // 测试：为了方便观察前后的虚拟节点变化
-
-  var render1 = compileToFunction("<ul style=\"color:red\">\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n    <li key=\"d\">d</li>\n</ul>");
-  var vm1 = new Vue({
-    data: {
-      name: 'zhu'
-    }
-  });
-  var preVnode = render1.call(vm1);
-  var el = createElm(preVnode);
-  document.body.appendChild(el);
-  var render2 = compileToFunction("<ul style=\"color:blue;background:red\">\n    <li key=\"d\">d</li>\n    <li key=\"c\">c</li>\n    <li key=\"b\">b</li>\n    <li key=\"a\">a</li>\n</ul>");
-  var vm2 = new Vue({
-    data: {
-      name: 'zhu'
-    }
-  });
-  var nextVnode = render2.call(vm2);
-  setTimeout(function () {
-    patch(preVnode, nextVnode);
-  }, 1000);
 
   return Vue;
 

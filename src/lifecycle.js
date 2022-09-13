@@ -7,8 +7,14 @@ export function initLifeCycle(Vue) {
     Vue.prototype._update = function (vnode) { // 将虚拟DOM转化成真实DOM
         const vm = this
         const el = vm.$el
-        // patch既有初始化的功能，又有更新的功能
-        vm.$el = patch(el, vnode)
+        // 把组件第一次生产的虚拟节点保存到_vnode上
+        const prevVnode = vm._vnode
+        vm._vnode = vnode
+        if (prevVnode) { // 之前渲染过了
+            vm.$el = patch(prevVnode, vnode)
+        } else {
+            vm.$el = patch(el, vnode)
+        }
     }
 
     // _c('div', {}, ...children)
