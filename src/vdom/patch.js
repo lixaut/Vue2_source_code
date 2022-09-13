@@ -73,8 +73,7 @@ function patchVnode(oldVNode, vnode) {
     // 文本的情况
     if (!oldVNode.tag) {
         if (oldVNode.text !== vnode.text) {
-            oldVNode.el.textContent = vnode.text // 用新的覆盖老的
-
+            el.textContent = vnode.text // 用新的覆盖老的
         }
     }
     // 是标签 我们需要比对标签的属性
@@ -127,7 +126,6 @@ function updateChildren(el, oldChildren, newChildren) {
         return map
     }
     let map = makeIndexByKey(oldChildren)
-    console.log(oldChildren)
 
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
         // 双方有一方头指针，大于尾部指针停止循环
@@ -167,6 +165,7 @@ function updateChildren(el, oldChildren, newChildren) {
             newEndVnode = newChildren[--newEndIndex]
         }
 
+        // debugger
         let moveIndex = map[newStartVnode.key]
         if (moveIndex !== undefined) {
             let moveVnode = oldChildren[moveIndex]

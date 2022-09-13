@@ -1011,7 +1011,7 @@
 
     if (!oldVNode.tag) {
       if (oldVNode.text !== vnode.text) {
-        oldVNode.el.textContent = vnode.text; // 用新的覆盖老的
+        el.textContent = vnode.text; // 用新的覆盖老的
       }
     } // 是标签 我们需要比对标签的属性
 
@@ -1065,7 +1065,6 @@
     }
 
     var map = makeIndexByKey(oldChildren);
-    console.log(oldChildren);
 
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
       // 双方有一方头指针，大于尾部指针停止循环
@@ -1094,7 +1093,8 @@
         el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling);
         oldStartVnode = oldChildren[++oldStartIndex];
         newEndVnode = newChildren[--newEndIndex];
-      }
+      } // debugger
+
 
       var moveIndex = map[newStartVnode.key];
 
